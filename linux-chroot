@@ -1,0 +1,71 @@
+#!/bin/sh
+
+if [ -z ${var} ]
+ then
+  echo
+  echo SETTING UP CHROOT...
+  echo
+ else
+  echo
+  echo "Must enter name of $chroot directory without trailing '/' as argument"
+  echo " EX: ./linux-chroot <path>"
+  echo
+  exit
+fi
+
+chrootname="$1"
+export chrootname
+
+SHELL=/bin/bash
+export SHELL
+
+echo ***MOUNTING LINUX SUBSYSTEMS
+
+echo     /usr/jail/$chrootname/proc
+mount -t linprocfs none /usr/jail/$chrootname/proc
+
+echo     /usr/jail/$chrootname/dev
+mount -t devfs none /usr/jail/$chrootname/dev
+
+echo     /usr/jail/$chrootname/sys
+mount -t linsysfs none /usr/jail/$chrootname/sys
+
+echo     /usr/jail/$chrootname/run
+mount -t tmpfs none /usr/jail/$chrootname/run
+
+
+
+echo
+echo ENTERING CHROOT $chrootname:
+echo
+
+
+chroot /usr/jail/$chrootname
+
+echo
+echo EXITING CHROOT $chrootname
+echo
+
+
+
+echo ***UNMOUNTING LINUX SUBSYSTEMS
+
+echo     /usr/jail/$chrootname/sys
+umount /usr/jail/$chrootname/sys
+
+echo     /usr/jail/$chrootname/run
+umount /usr/jail/$chrootname/run
+
+echo     ...killing pending processes attached to /usr/jail/$chrootname/dev
+clingons="$( fstat | grep $chrootname | grep -o -E '^\w+ +\w+ +\w+' | grep -o -E '[0-9]+\$' )"
+for c in $clingons
+ do
+  kill $c
+ done
+
+
+echo     /usr/jail/$chrootname/dev
+umount /usr/jail/$chrootname/dev
+
+echo     /usr/jail/$chrootname/proc
+umount /usr/jail/$chrootname/proc
